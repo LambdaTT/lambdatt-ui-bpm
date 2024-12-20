@@ -12,7 +12,7 @@
 
       <div class="container item">
         <i v-if="!hideIcons" class="fa-solid fa-caret-right item-icon"></i>
-        <span>{{ bpm.data.stepName }}</span>
+        <span>{{ data.stepName }}</span>
       </div>
     </div>
 
@@ -24,7 +24,7 @@
 
       <div class="container item">
         <ul>
-          <li v-for="(step, index) in bpm.data.stepHistory" :key="index">
+          <li v-for="(step, index) in data.stepHistory" :key="index">
             <i v-if="!hideIcons" class="fa-solid fa-caret-right item-icon"></i>{{ step.date }} - {{ step.label }}
           </li>
         </ul>
@@ -40,10 +40,7 @@ import { ENDPOINTS } from 'src/services/endpoints'
 
 // Components:
 export default {
-  name: 'components-common-bpminfo',
-
-  components: {
-  },
+  name: 'ui-bpm-bpminfo',
 
   props: {
     hideIcons: Boolean,
@@ -55,35 +52,37 @@ export default {
     modelValue: {
       type: Object,
       default: () => ({}), // Garante um objeto vazio como padrão
+      required: true
     },
   },
 
   data() {
     return {
-      bpm: {
-        data: {
-          stepName: null,
-          executionKey: null,
-          id_bpm_execution: null,
-          availableActions: [],
-          stepHistory: [],
-        },
-        function: {
-          read: this.read,
-        },
+      data: {
+        stepName: null,
+        executionKey: null,
+        id_bpm_execution: null,
+        availableActions: [],
+        stepHistory: [],
       },
     }
   },
 
   computed: {
+    factory() {
+      return {
+        data: { ...this.data },
+        read: this.read
+      }
+    }
   },
 
   methods: {
     async read(source) {
       // Fills Data
-      for (let key in this.bpm.data) {
+      for (let key in this.data) {
         if (key in source) {
-          this.bpm.data[key] = source[key];
+          this.data[key] = source[key];
         }
       }
       // Fills Available Transitions
@@ -96,7 +95,7 @@ export default {
     async getTransitions(executionKey) {
       try {
         const response = await this.$http.get(`${ENDPOINTS.BPM.AVAILABLE_TRANSITIONS}/${executionKey}`);
-        this.bpm.data.availableActions = response.data.map(action => ({
+        this.data.availableActions = response.data.map(action => ({
           icon: action.ds_icon,
           label: action.ds_title,
           value: action.id_bpm_transition,
@@ -127,7 +126,7 @@ export default {
     async getStepHistory(executionId) {
       try {
         const response = await this.$http.get(`${ENDPOINTS.BPM.STEP_TRACKING}/${executionId}`);
-        this.bpm.data.stepHistory = response.data.map(step => ({
+        this.data.stepHistory = response.data.map(step => ({
           date: step.dtTracking,
           label: step.stepName,
         }))
@@ -147,31 +146,26 @@ export default {
 
   watch: {
     // Sincroniza alterações de bpm para o pai
-    bpm: {
-      handler(newValue) {
-        this.$emit("update:model-value", newValue);
+    data: {
+      handler() {
+        this.$emit("update:model-value", this.factory);
       },
       deep: true,
     },
 
     // Sincroniza alterações do pai para o bpm
     modelValue: {
-      handler(newValue) {
-        if (newValue) {
-          Object.assign(this.bpm.data, newValue.data); // Copia os valores do pai para o filho
-        }
+      handler() {
+        for (let k in this.data)
+          if (k in this.modelValue.data)
+            this.data[k] = this.modelValue.data[k]
       },
       deep: true,
     },
   },
 
-  mounted() {
-    // Sincroniza bpm inicial com o pai
-    if (Object.keys(this.modelValue).length === 0) {
-      this.$emit("update:model-value", this.bpm);
-    } else {
-      Object.assign(this.bpm.data, this.modelValue.data);
-    }
+  created() {
+    this.$emit("update:model-value", this.factory);
   }
 }
 </script>
