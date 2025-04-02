@@ -113,6 +113,12 @@ export default {
               if (this.postTransitionFn) {
                 await this.postTransitionFn()
               }
+
+              this.$utils.notify({
+                message: 'Ação realizada com sucesso',
+                type: 'positive',
+                position: 'top-right'
+              });
             } catch (error) {
               throw error;
             }
