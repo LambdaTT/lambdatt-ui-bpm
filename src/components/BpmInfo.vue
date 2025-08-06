@@ -35,9 +35,6 @@
 </template>
 
 <script>
-// Services:
-import { ENDPOINTS } from 'src/services/endpoints'
-
 // Components:
 export default {
   name: 'ui-bpm-bpminfo',
@@ -94,7 +91,7 @@ export default {
 
     async getTransitions(executionKey) {
       try {
-        const response = await this.$http.get(`${ENDPOINTS.BPM.AVAILABLE_TRANSITIONS}/${executionKey}`);
+        const response = await this.$toolcase.services.http.get(`${this.$bpm.ENDPOINTS.BPM.AVAILABLE_TRANSITIONS}/${executionKey}`);
         this.data.availableActions = response.data.map(action => ({
           icon: action.ds_icon,
           label: action.ds_title,
@@ -114,7 +111,7 @@ export default {
                 await this.postTransitionFn()
               }
 
-              this.$utils.notify({
+              this.$toolcase.services.utils.notify({
                 message: 'Ação realizada com sucesso',
                 type: 'positive',
                 position: 'top-right'
@@ -131,7 +128,7 @@ export default {
 
     async getStepHistory(executionId) {
       try {
-        const response = await this.$http.get(`${ENDPOINTS.BPM.STEP_TRACKING}/${executionId}`);
+        const response = await this.$toolcase.services.http.get(`${this.$bpm.ENDPOINTS.BPM.STEP_TRACKING}/${executionId}`);
         this.data.stepHistory = response.data.map(step => ({
           date: step.dtTracking,
           label: step.stepName,
@@ -143,7 +140,7 @@ export default {
 
     async executeTransition(executionKey, transitionKey) {
       try {
-        const response = await this.$http.put(`${ENDPOINTS.BPM.DO_TRANSITION}/${executionKey}/${transitionKey}`);
+        const response = await this.$toolcase.services.http.put(`${this.$bpm.ENDPOINTS.BPM.DO_TRANSITION}/${executionKey}/${transitionKey}`);
       } catch (error) {
         console.error(`Failed to execute transition ${transitionKey}.`, error);
       }
