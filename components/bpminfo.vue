@@ -99,6 +99,7 @@ export default {
           icon: action.ds_icon,
           label: action.ds_title,
           value: action.id_bpm_transition,
+          key: action.ds_key,
           fn: async () => {
             try {
               // Confimation
