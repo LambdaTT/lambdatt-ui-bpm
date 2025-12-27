@@ -53,6 +53,10 @@ export default {
       default: () => ({}), // Garante um objeto vazio como padrão
       required: true
     },
+    ExecutionKey: {
+      type: String,
+      required: true
+    }
   },
 
   data() {
@@ -85,15 +89,15 @@ export default {
         }
       }
       // Fills Available Transitions
-      if (source.executionKey) { await this.getTransitions(source.executionKey); }
+      await this.getTransitions(source.executionKey);
 
       // Fills Step History
-      if (source.id_bpm_execution) { await this.getStepHistory(source.id_bpm_execution); }
+      await this.getStepHistory(source.id_bpm_execution);
     },
 
-    async getTransitions(executionKey) {
+    async getTransitions() {
       try {
-        const response = await this.$getService('toolcase/http').get(`${ENDPOINTS.AVAILABLE_TRANSITIONS}/${executionKey}`);
+        const response = await this.$getService('toolcase/http').get(`${ENDPOINTS.AVAILABLE_TRANSITIONS}/${this.ExecutionKey}`);
         this.data.availableActions = response.data.map(action => ({
           icon: action.ds_icon,
           label: action.ds_title,
@@ -107,7 +111,7 @@ export default {
                 await this.preTransitionFn()
               }
 
-              await this.executeTransition(executionKey, action.ds_key);
+              await this.executeTransition(action.ds_key);
 
               if (this.postTransitionFn) {
                 await this.postTransitionFn()
@@ -128,9 +132,9 @@ export default {
       }
     },
 
-    async getStepHistory(executionId) {
+    async getStepHistory() {
       try {
-        const response = await this.$getService('toolcase/http').get(`${ENDPOINTS.STEP_TRACKING}/${executionId}`);
+        const response = await this.$getService('toolcase/http').get(`${ENDPOINTS.STEP_TRACKING}/${this.ExecutionKey}`);
         this.data.stepHistory = response.data.map(step => ({
           date: step.dtTracking,
           label: step.stepName,
@@ -140,9 +144,9 @@ export default {
       }
     },
 
-    async executeTransition(executionKey, transitionKey) {
+    async executeTransition(transitionKey) {
       try {
-        const response = await this.$getService('toolcase/http').put(`${ENDPOINTS.TRANSITION}/${executionKey}/${transitionKey}`);
+        const response = await this.$getService('toolcase/http').put(`${ENDPOINTS.TRANSITION}/${this.ExecutionKey}/${transitionKey}`);
       } catch (error) {
         console.error(`Failed to execute transition ${transitionKey}.`, error);
       }
@@ -167,9 +171,16 @@ export default {
       },
       deep: true,
     },
+
+    async ExecutionKey(val) {
+      if (!!val) {
+        await this.getTransitions()
+        await this.getStepHistory()
+      }
+    }
   },
 
-  created() {
+  mounted() {
     this.$emit("update:model-value", this.factory);
   }
 }
