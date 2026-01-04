@@ -55,7 +55,7 @@ export default {
     },
     ExecutionKey: {
       type: String,
-      required: true,
+      default: () => null,
     }
   },
 
@@ -63,8 +63,6 @@ export default {
     return {
       data: {
         stepName: null,
-        executionKey: null,
-        id_bpm_execution: null,
         availableActions: [],
         stepHistory: [],
       },
@@ -75,24 +73,23 @@ export default {
     factory() {
       return {
         data: { ...this.data },
-        read: this.read
       }
     }
   },
 
   methods: {
-    async read(source) {
-      // Fills Data
-      for (let key in this.data) {
-        if (key in source) {
-          this.data[key] = source[key];
+    async getExecutionInfo() {
+      try {
+        const response = await this.$getService('toolcase/http').get(`${ENDPOINTS.EXECUTION_INFO}/${this.ExecutionKey}`);
+        // Fills Data
+        for (let key in this.data) {
+          if (key in response.data) {
+            this.data[key] = response.data[key];
+          }
         }
+      } catch (error) {
+        console.error("An error occurred while attempting to retrieve the execution's data.", error);
       }
-      // Fills Available Transitions
-      await this.getTransitions(source.executionKey);
-
-      // Fills Step History
-      await this.getStepHistory(source.id_bpm_execution);
     },
 
     async getTransitions() {
@@ -107,11 +104,14 @@ export default {
               // Confimation
               if (!confirm(`Deseja proceder com a ação: ${action.ds_title}?`)) { return false; }
 
+              this.$getService('toolcase/loader').load('bpm-transition-execute');
+
               if (this.preTransitionFn) {
                 await this.preTransitionFn()
               }
 
               await this.executeTransition(action.ds_key);
+              await this.refresh();
 
               if (this.postTransitionFn) {
                 await this.postTransitionFn()
@@ -124,6 +124,8 @@ export default {
               });
             } catch (error) {
               throw error;
+            } finally {
+              this.$getService('toolcase/loader').loaded('bpm-transition-execute');
             }
           },
         }))
@@ -146,11 +148,17 @@ export default {
 
     async executeTransition(transitionKey) {
       try {
-        const response = await this.$getService('toolcase/http').put(`${ENDPOINTS.TRANSITION}/${this.ExecutionKey}/${transitionKey}`);
+        await this.$getService('toolcase/http').put(`${ENDPOINTS.TRANSITION}/${this.ExecutionKey}/${transitionKey}`);
       } catch (error) {
         console.error(`Failed to execute transition ${transitionKey}.`, error);
       }
-    }
+    },
+
+    async refresh() {
+      await this.getExecutionInfo()
+      await this.getTransitions()
+      await this.getStepHistory()
+    },
   },
 
   watch: {
@@ -162,21 +170,9 @@ export default {
       deep: true,
     },
 
-    // Sincroniza alterações do pai para o bpm
-    modelValue: {
-      handler() {
-        for (let k in this.data)
-          if (k in this.modelValue.data)
-            this.data[k] = this.modelValue.data[k]
-      },
-      deep: true,
-    },
-
     async ExecutionKey(val) {
-      if (!!val) {
-        await this.getTransitions()
-        await this.getStepHistory()
-      }
+      if (!!val)
+        await this.refresh()
     }
   },
 
