@@ -143,8 +143,6 @@ export default {
                 type: "positive",
                 position: "top-right",
               });
-            } catch (error) {
-              throw error;
             } finally {
               this.$getService("toolcase/loader").loaded(
                 "bpm-transition-execute",
@@ -204,7 +202,7 @@ export default {
     },
 
     async ExecutionKey(val) {
-      if (!!val) await this.refresh();
+      if (val) await this.refresh();
     },
   },
 
